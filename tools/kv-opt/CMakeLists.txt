@@ -1,0 +1,12 @@
+add_llvm_executable(kv-opt
+  kv-opt.cpp
+)
+
+target_link_libraries(kv-opt
+  PRIVATE
+  KVCacheDSL
+  MLIRIR
+  MLIRParser
+  MLIRPass
+  MLIRSupport
+)

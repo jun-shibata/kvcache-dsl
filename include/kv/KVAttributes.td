@@ -1,4 +1,5 @@
 include "mlir/IR/AttrTypeBase.td"
+include "kv/KVDialect.td"
 
 def KV_LayoutAttr : AttrDef<KVDialect, "Layout"> {
   let summary = "Layout as affine map + alignment";
@@ -6,6 +7,8 @@ def KV_LayoutAttr : AttrDef<KVDialect, "Layout"> {
     "mlir::AffineMap":$map,
     "int64_t":$alignment
   );
+
+  let mnemonic = "layout";
 
   let assemblyFormat = "`<` $map `,` `alignment` `=` $alignment `>`";
 }
@@ -16,6 +19,8 @@ def KV_AccessAttr : AttrDef<KVDialect, "Access"> {
     "mlir::StringRef":$pattern  // "seq_major", etc.
   );
 
+  let mnemonic = "access";
+
   let assemblyFormat = "`<` $pattern `>`";
 }
 
@@ -25,5 +30,9 @@ def KV_ScheduleAttr : AttrDef<KVDialect, "Schedule"> {
     "mlir::ArrayRef<int64_t>":$loopOrder,
     "mlir::ArrayRef<int64_t>":$tile
   );
+
+  let mnemonic = "schedule";
+
+  let assemblyFormat = "`<` $loopOrder `,` $tile `>`";
 }
 
