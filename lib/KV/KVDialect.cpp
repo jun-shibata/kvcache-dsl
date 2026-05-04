@@ -1,6 +1,10 @@
-#include "KVDialect.h"
-#include "KVOps.h"
-#include "KVTypes.h"
+#include "kv/KVDialect.h"
+#include "kv/KVOps.h"
+#include "kv/KVTypes.h"
+#include "mlir/IR/DialectImplementation.h"
+
+#define GET_DIALECT_DEFS
+#include "KVDialect.cpp.inc"
 
 using namespace mlir;
 using namespace kv;

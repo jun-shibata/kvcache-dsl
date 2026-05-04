@@ -1,8 +1,14 @@
 #pragma once
 
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+
+#include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+
+#include "llvm/ADT/TypeSwitch.h"
 
 #include "kv/KVDialect.h"
 #include "kv/KVTypes.h"
@@ -10,4 +16,4 @@
 
 // Generated op declarations
 #define GET_OP_CLASSES
-#include "kv/KVOps.h.inc"
+#include "KVOps.h.inc"
