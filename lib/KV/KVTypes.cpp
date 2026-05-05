@@ -1,4 +1,5 @@
 #include "kv/KVTypes.h"
+#include "kv/KVDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/BuiltinTypes.h"

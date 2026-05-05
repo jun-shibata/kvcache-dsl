@@ -9,4 +9,15 @@ target_link_libraries(kv-opt
   MLIRParser
   MLIRPass
   MLIRSupport
+  MLIRTransforms
+  MLIRVectorDialect
+  MLIRMemRefDialect
+  MLIRArithDialect
+  MLIRFuncDialect
+  MLIRSCFDialect
+  MLIROptLib
+  MLIRExecutionEngine
+  MLIRTargetLLVMIRExport
+  MLIRLLVMToLLVMIRTranslation
+  MLIRBuiltinToLLVMIRTranslation
 )

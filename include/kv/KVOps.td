@@ -1,7 +1,5 @@
 include "mlir/IR/OpBase.td"
 include "kv/KVBase.td"
-//include "kv/KVTypes.td"
-//include "kv/KVAttributes.td"
 
 def KV_AllocOp : Op<KVDialect, "alloc"> {
   let summary = "Allocate KV cache";

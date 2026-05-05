@@ -30,11 +30,11 @@ int main(int argc, char **argv) {
     return createKVToVectorPass();
   });
 
-  mlir::registerPass([] -> std::unique_ptr<mlir::Pass> {
+  mlir::registerPass([]() -> std::unique_ptr<mlir::Pass> {
     return createKVLayoutAnalysisPass();
   });
   
-  mlir::registerPass([] -> std::unique_ptr<mlir::Pass> {
+  mlir::registerPass([]() -> std::unique_ptr<mlir::Pass> {
     return createKVAutoReorderPass();
   });
 

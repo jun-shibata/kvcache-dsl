@@ -37,6 +37,8 @@ static AffineMap makeInnermostMap(MLIRContext *ctx, int64_t rank, int64_t dim) {
 
 struct KVAutoReorderPass
   : public PassWrapper<KVAutoReorderPass, OperationPass<ModuleOp>> {
+  
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(KVAutoReorderPass)
 
   Option<int> Threshold {
     *this, "threshold",
@@ -44,15 +46,20 @@ struct KVAutoReorderPass
     llvm::cl::init(5)
   };
 
+  KVAutoReorderPass() = default;
+  KVAutoReorderPass(const KVAutoReorderPass &pass)
+    : PassWrapper(pass) {}
+  
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
+    OpBuilder builder(ctx);
 
-    getOperation().walk([&](kv::KVVectorLoadOp op) {
+    getOperation().walk([&](kv::VectorLoadOp op) {
       auto costAttr = op->getAttrOfType<IntegerAttr>("vectorization_cost");
       if (!costAttr) { return; }
       if (costAttr.getInt() <= Threshold) { return; }
       Value cache = op.getCache();
-      auto cacheTy = cache.getType().dyn_cast<kv::CacheType>();
+      auto cacheTy = mlir::dyn_cast<kv::CacheType>(cache.getType());
       if (!cacheTy) { return; } // Only handle KV cache values
 
       // Assume rank = 3 for now (S,H,D)
@@ -63,15 +70,16 @@ struct KVAutoReorderPass
       AffineMap newMap = makeInnermostMap(ctx, rank, dim);
 
       // Wrap into your LayoutAttr
-      auto layoutAttr = kv::LayoutAttr::get(
-        ctx, newMap,
-        /*alignment=*/128
-      );
+      auto mapAttr = AffineMapAttr::get(newMap);
+      auto alignAttr = builder.getI64IntegerAttr(128);
 
-      OpBuilder builder(op);
+      auto layoutAttr = kv::LayoutAttr::get(ctx, mapAttr, alignAttr);
+
+      builder.setInsertionPoint(op);
 
       // Insert reorder before op
-      auto reordered = builder.create<kv::KVReorderOp>(
+      auto reordered = kv::ReorderOp::create(
+        builder,
         op.getLoc(),
         cacheTy,
         cache,
@@ -79,7 +87,7 @@ struct KVAutoReorderPass
       );
 
       // Rewire vector_load to use reordered cache
-      op.getCacheMutable().assign(reordered);
+      op.getCacheMutable().assign(reordered.getResult());
 
       // (Optional) clear stale analysis attrs to force recompute if rerun
       op->removeAttr("vectorization_cost");

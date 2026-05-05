@@ -6,8 +6,8 @@ include "kv/KVDialect.td"
 def KV_LayoutAttr : AttrDef<KVDialect, "Layout"> {
   let summary = "Layout as affine map + alignment";
   let parameters = (ins
-    "mlir::AffineMap":$map,
-    "int64_t":$alignment
+    "mlir::AffineMapAttr":$map,
+    "mlir::IntegerAttr":$alignment
   );
 
   let mnemonic = "layout";
@@ -18,7 +18,7 @@ def KV_LayoutAttr : AttrDef<KVDialect, "Layout"> {
 def KV_AccessAttr : AttrDef<KVDialect, "Access"> {
   let summary = "Access pattern";
   let parameters = (ins
-    "mlir::StringRef":$pattern  // "seq_major", etc.
+    "mlir::StringAttr":$pattern  // "seq_major", etc.
   );
 
   let mnemonic = "access";
@@ -29,8 +29,8 @@ def KV_AccessAttr : AttrDef<KVDialect, "Access"> {
 def KV_ScheduleAttr : AttrDef<KVDialect, "Schedule"> {
   let summary = "Loop schedule";
   let parameters = (ins
-    "mlir::ArrayRef<int64_t>":$loopOrder,
-    "mlir::ArrayRef<int64_t>":$tile
+    "mlir::DenseI64ArrayAttr":$loopOrder,
+    "mlir::DenseI64ArrayAttr":$tile
   );
 
   let mnemonic = "schedule";
@@ -44,8 +44,8 @@ def KV_CacheType : TypeDef<KVDialect, "Cache"> {
   let summary = "KV Cache logical type";
   let parameters = (ins
     "mlir::Type":$elementType,
-    "mlir::ArrayRef<int64_t>":$shape, // (S, H, D)
-    "mlir::StringRef":$role           // "key" | "value"
+    "mlir::ArrayAttr":$shape, // (S, H, D)
+    "mlir::StringAttr":$role  // "key" | "value"
   );
 
   let mnemonic = "cache";
