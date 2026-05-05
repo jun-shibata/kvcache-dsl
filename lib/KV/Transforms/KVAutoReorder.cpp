@@ -40,6 +40,14 @@ struct KVAutoReorderPass
   
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(KVAutoReorderPass)
 
+  StringRef getArgument() const final {
+    return "kv-auto-reorder";
+  }
+
+  StringRef getDescription() const final {
+    return "Automatically reorder KV cache layout based on vectorization cost";
+  }
+
   Option<int> Threshold {
     *this, "threshold",
     llvm::cl::desc("Reorder when vectorization_cost > threshold"),

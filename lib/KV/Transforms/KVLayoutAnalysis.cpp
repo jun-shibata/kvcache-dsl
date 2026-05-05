@@ -26,6 +26,15 @@ static bool isUnitStrideInnerDim(MemRefType type, int64_t dim) {
 
 struct KVLayoutAnalysisPass
   : public PassWrapper<KVLayoutAnalysisPass, OperationPass<ModuleOp>> {
+  
+  StringRef getArgument() const final {
+    return "kv-layout-analysis";
+  }
+
+  StringRef getDescription() const final {
+    return "Analyze KV cache layout for vectorization";
+  }
+
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
 
