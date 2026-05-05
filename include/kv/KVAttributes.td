@@ -27,7 +27,7 @@ def KV_AccessAttr : AttrDef<KVDialect, "Access"> {
 def KV_ScheduleAttr : AttrDef<KVDialect, "Schedule"> {
   let summary = "Loop schedule";
   let parameters = (ins
-    "mlir::StringAttr":$pattern
+    "mlir::StringAttr":$pattern,
     "mlir::ArrayAttr":$loopOrder,
     "mlir::ArrayAttr":$tile
   );

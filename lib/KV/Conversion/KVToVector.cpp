@@ -91,6 +91,12 @@ struct KVVectorLoadLowering
 };
 
 struct KVToVectorPass : public PassWrapper<KVToVectorPass, OperationPass<mlir::ModuleOp>> {
+  StringRef getArgument() const final { return "kv-to-vector"; }
+  
+  StringRef getDescription() const final {
+    return "Lower KV dialect to vector dialect";
+  }
+
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
     patterns.add<KVVectorLoadLowering>(&getContext());
