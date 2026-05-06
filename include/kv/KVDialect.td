@@ -8,4 +8,7 @@ def KVDialect : Dialect {
     "Dialect for representing KV cache layout, access atterns,
     and vectorization-aware transformations."
   }];
+
+  let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
 }

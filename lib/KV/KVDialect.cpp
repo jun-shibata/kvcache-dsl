@@ -13,17 +13,12 @@
 #define GET_ATTRDEF_CLASSES
 #include "KVAttributes.cpp.inc"
 
+// --- Dialect (constructor + parseAttribute/printAttribute/parseType/printType) ---
+#define GET_DIALECT_DEFS
+#include "KVDialect.cpp.inc"
+
 using namespace mlir;
 using namespace kv;
-
-MLIR_DEFINE_EXPLICIT_TYPE_ID(kv::KVDialect)
-
-KVDialect::~KVDialect() = default;
-
-KVDialect::KVDialect(mlir::MLIRContext *ctx)
-  : Dialect(getDialectNamespace(), ctx, TypeID::get<KVDialect>()) {
-    initialize();
-}
 
 void KVDialect::initialize() {
   addTypes<

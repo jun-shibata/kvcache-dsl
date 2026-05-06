@@ -1,28 +1,21 @@
 #include "kv/KVOps.h"
+#include "kv/KVTypes.h"
 
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "llvm/ADT/APFloat.h"
+
 using namespace mlir;
-
-static bool isUnitStrideInnerDim(MemRefType type, int64_t dim) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-
-  if (failed(type.getStridesAndOffset(strides, offset)))
-    return false;
-
-  if (dim < 0 || dim >= (int64_t)strides.size())
-    return false;
-  
-  return strides[dim] == 1;
-}
 
 struct KVVectorLoadLowering
   : public OpConversionPattern<kv::VectorLoadOp> {
@@ -34,19 +27,28 @@ struct KVVectorLoadLowering
     ConversionPatternRewriter &rewriter) const override {
 
     Location loc = op.getLoc();
-    
-    // Assume cache already lowered to memref
-    Value memref = adaptor.getCache();
 
-    auto memrefType = mlir::dyn_cast<MemRefType>(memref.getType());
-    if (!memrefType) {
+    auto cacheTy = mlir::dyn_cast<kv::CacheType>(op.getCache().getType());
+    if (!cacheTy)
       return failure();
-    }
+
+    // Build a flat row-major MemRefType from the cache shape/element type.
+    SmallVector<int64_t> shape(cacheTy.getShape().asArrayRef());
+    auto memrefType = MemRefType::get(shape, cacheTy.getElementType());
+
+    // Bridge kv.cache -> memref; a later pass can concretize this.
+    auto castOp = UnrealizedConversionCastOp::create(
+        rewriter, loc, TypeRange{memrefType}, ValueRange{adaptor.getCache()});
+    Value memref = castOp.getResult(0);
 
     int64_t dim = op.getDim();
     int64_t width = op.getWidth();
 
-    bool canVectorize = isUnitStrideInnerDim(memrefType, dim);
+    // Use the cost annotation written by -kv-layout-analysis rather than
+    // re-deriving vectorizability from strides on the synthetic memref.
+    bool canVectorize = false;
+    if (auto costAttr = op->getAttrOfType<IntegerAttr>("vectorization_cost"))
+      canVectorize = (costAttr.getInt() == 0);
 
     // Build result types
     auto elemType = memrefType.getElementType();
@@ -58,18 +60,26 @@ struct KVVectorLoadLowering
     // --- vector.transfer_read path ---
     SmallVector<Value> indices;
     for (int i = 0; i < memrefType.getRank(); ++i) {
-      indices.push_back(arith::ConstantIndexOp::create(rewriter, loc, 0));
+      indices.push_back(arith::ConstantIndexOp::create(rewriter, loc, 0).getResult());
     }
 
     if (canVectorize) {
-      auto map = AffineMap::getMultiDimIdentityMap(
-        memrefType.getRank(), rewriter.getContext());
+      // Map from memref rank -> vector rank 1, selecting the vectorized dim.
+      auto map = AffineMap::get(memrefType.getRank(), 0,
+          {getAffineDimExpr(dim, rewriter.getContext())},
+          rewriter.getContext());
 
+      auto floatType = mlir::cast<FloatType>(elemType);
+      Value padding = arith::ConstantFloatOp::create(
+          rewriter, loc, floatType,
+          APFloat::getZero(floatType.getFloatSemantics())).getResult();
+
+      SmallVector<bool> inBounds(vecType.getRank(), false);
       auto read = vector::TransferReadOp::create(
         rewriter, loc, vecType, memref, indices,
-        /*padding=*/Value(),
-        /*permutation_map=*/map,
-        /*in_bounds=*/ArrayRef<bool>{}
+        padding,
+        map,
+        ArrayRef<bool>(inBounds)
       );
 
       status = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
@@ -98,6 +108,13 @@ struct KVToVectorPass : public PassWrapper<KVToVectorPass, OperationPass<mlir::M
   }
 
   void runOnOperation() override {
+    // Ensure target dialects are loaded before any ops are created in patterns.
+    // test.mlir contains only kv.* ops so these dialects may not be loaded yet.
+    getContext().loadDialect<
+        mlir::arith::ArithDialect,
+        mlir::memref::MemRefDialect,
+        mlir::vector::VectorDialect>();
+
     mlir::RewritePatternSet patterns(&getContext());
     patterns.add<KVVectorLoadLowering>(&getContext());
 
@@ -108,6 +125,7 @@ struct KVToVectorPass : public PassWrapper<KVToVectorPass, OperationPass<mlir::M
       mlir::memref::MemRefDialect,
       mlir::arith::ArithDialect>();
 
+    target.addLegalOp<mlir::UnrealizedConversionCastOp>();
     target.addIllegalOp<kv::VectorLoadOp>();
 
     if (failed(mlir::applyPartialConversion(

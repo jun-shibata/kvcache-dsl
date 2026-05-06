@@ -1,9 +1,9 @@
 #include "kv/KVOps.h"
 #include "kv/KVDialect.h"
+#include "kv/KVAttributes.h"
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -12,24 +12,23 @@ using namespace mlir;
 
 namespace {
 
-static bool isUnitStrideInnerDim(MemRefType type, int64_t dim) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  if (failed(type.getStridesAndOffset(strides, offset))) {
+// Returns true if logical `dim` is the innermost (unit-stride) position
+// in the layout's affine map. For a permutation map, "innermost" means
+// dim appears as the last result expression.
+
+static bool isInnermostDim(kv::LayoutAttr layout, int64_t dim, MLIRContext *ctx) {
+  AffineMap map = layout.getMap().getValue();
+  if (map.getNumResults() == 0) {
     return false;
   }
-  if (dim < 0 || dim >= (int64_t)strides.size()) {
-    return false;
-  }
-  return strides[dim] == 1;
+  AffineExpr lastResult = map.getResult(map.getNumResults() - 1);
+  return lastResult == getAffineDimExpr(dim, ctx);
 }
 
 struct KVLayoutAnalysisPass
   : public PassWrapper<KVLayoutAnalysisPass, OperationPass<ModuleOp>> {
   
-  StringRef getArgument() const final {
-    return "kv-layout-analysis";
-  }
+  StringRef getArgument() const final { return "kv-layout-analysis"; }
 
   StringRef getDescription() const final {
     return "Analyze KV cache layout for vectorization";
@@ -43,20 +42,25 @@ struct KVLayoutAnalysisPass
       // If not, skip (you can extend later to read #kv.layout).
       Value cache = op.getCache();
 
-      auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(cache.getType());
-      
-      if (!memrefTy) {
-        return;
-      }
-      
+      if (!mlir::isa<kv::CacheType>(cache.getType())) { return; }
+
       int64_t dim = op.getDim();
       int64_t width = op.getWidth();
-      
-      bool unit = isUnitStrideInnerDim(memrefTy, dim);
-      
-      // Very simple heuristic for now
+
+      // Trace back to the op that carries the layout attributes.
+      kv::LayoutAttr layout;
+      if (auto allocOp = cache.getDefiningOp<kv::AllocOp>()) {
+        layout = allocOp.getLayout();
+      }
+      else if (auto reorderOp = cache.getDefiningOp<kv::ReorderOp>()) {
+        layout = reorderOp.getTargetLayout();
+      }
+
+      if (!layout) return;
+
+      bool unit = isInnermostDim(layout, dim, ctx);
       int32_t cost = unit ? 0 : 10;
-      
+     
       op->setAttr("vectorization_cost",
                   IntegerAttr::get(IntegerType::get(ctx, 32), cost));
       

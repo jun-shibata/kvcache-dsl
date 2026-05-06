@@ -16,8 +16,4 @@ target_link_libraries(kv-opt
   MLIRFuncDialect
   MLIRSCFDialect
   MLIROptLib
-  MLIRExecutionEngine
-  MLIRTargetLLVMIRExport
-  MLIRLLVMToLLVMIRTranslation
-  MLIRBuiltinToLLVMIRTranslation
 )
