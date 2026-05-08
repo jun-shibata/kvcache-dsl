@@ -8,7 +8,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
-
 #include "kv/KVDialect.h"
 
 // Forward declare your pass
@@ -22,7 +21,9 @@ int main(int argc, char **argv) {
     kv::KVDialect,
     mlir::vector::VectorDialect,
     mlir::memref::MemRefDialect,
-    mlir::arith::ArithDialect
+    mlir::arith::ArithDialect,
+    mlir::func::FuncDialect,
+    mlir::scf::SCFDialect
   >();
 
   // Register pass
