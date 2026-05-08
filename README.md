@@ -20,6 +20,26 @@ KVCache-DSL addresses this by:
 - Vectorization-aware lowering to MLIR vector dialect
 - Extensible MLIR-based design
 
+## Building KVCache-DSL
+
+KVCache-DSL uses CMake with the Ninja generator for out-of-tree builds.
+
+### Configure
+
+```bash
+cmake -G Ninja /path_to/kvcache-dsl \
+      -B /path_to/build \
+      -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+cmake --install .
+```
+
+This command configures the project and generates Ninja build files in the specified build directory.
+
+/path_to/kvcache-dsl : Path to the KVCache-DSL source tree
+/path_to/build : Directory where build artifacts will be generated
+-DCMAKE_BUILD_TYPE=Release : Enables optimized release builds
+
 ## Compilation Pipeline
 KVCache-DSL transformations are applied using:
 
