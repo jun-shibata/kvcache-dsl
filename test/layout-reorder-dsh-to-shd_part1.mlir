@@ -1,4 +1,4 @@
-// RUN: kv-opt %s -kv-layout-analysis -kv-auto-reorder | FileCheck %s
+// RUN: /Users/jun/Work/pj/kvcache-dsl-workspace/build/tools/kv-opt/kv-opt %s -kv-layout-analysis -kv-auto-reorder | FileCheck %s
 
 module {
   %cache = "kv.alloc"() {
@@ -16,5 +16,5 @@ module {
     -> (vector<16xf16>, i32)
 }
 
-// CHECK-NOT: kv.reorder
+// CHECK: kv.reorder
 // CHECK: targetLayout
