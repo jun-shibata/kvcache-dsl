@@ -11,12 +11,20 @@ list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
 
 include(AddMLIR)
 include(AddLLVM)
+include(LLVMExternalProjectUtils)
+include(HandleLLVMOptions)
 
+include(LLVMConfig)
 add_definitions(${LLVM_DEFINITIONS})
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(${MLIR_INCLUDE_DIRS})
+
+add_definitions(${LLVM_DEFINITIONS})
 
 add_subdirectory(lib)
 add_subdirectory(tools)
+add_subdirectory(test)

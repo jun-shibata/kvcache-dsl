@@ -1,3 +1,5 @@
+// RUN: /Users/jun/Work/pj/kvcache-dsl-workspace/build/tools/kv-opt/kv-opt %s -kv-layout-analysis -kv-auto-reorder | FileCheck %s
+
 module {
   // Transform layout from logical (s,h,d)
   // into physical (d,s,h).
@@ -26,3 +28,5 @@ module {
   } : (!kv.cache<f16, [2048,16,128], "key">)
     -> (vector<16xf16>, i32)
 }
+// CHECK: kv.reorder
+// CHECK: targetLayout
