@@ -1,3 +1,4 @@
+#include "kv/KVAttributes.h"
 #include "kv/KVOps.h"
 #include "kv/KVTypes.h"
 
@@ -44,11 +45,28 @@ struct KVVectorLoadLowering
     int64_t dim = op.getDim();
     int64_t width = op.getWidth();
 
-    // Use the cost annotation written by -kv-layout-analysis rather than
-    // re-deriving vectorizability from strides on the synthetic memref.
+    // Determine if this load is unit-stride: prefer the pre-computed annotation
+    // from -kv-layout-analysis; fall back to inspecting the layout's affine map
+    // directly so that -kv-to-vector works without running -kv-layout-analysis.
     bool canVectorize = false;
-    if (auto costAttr = op->getAttrOfType<IntegerAttr>("vectorization_cost"))
+    if (auto costAttr = op->getAttrOfType<IntegerAttr>("vectorization_cost")) {
       canVectorize = (costAttr.getInt() == 0);
+    } else {
+      Value cache = op.getCache();
+      kv::LayoutAttr layout;
+      if (auto allocOp = cache.getDefiningOp<kv::AllocOp>())
+        layout = allocOp.getLayout();
+      else if (auto reorderOp = cache.getDefiningOp<kv::ReorderOp>())
+        layout = reorderOp.getTargetLayout();
+
+      if (layout) {
+        AffineMap map = layout.getMap().getValue();
+        if (map.getNumResults() > 0) {
+          AffineExpr lastResult = map.getResult(map.getNumResults() - 1);
+          canVectorize = (lastResult == getAffineDimExpr(dim, rewriter.getContext()));
+        }
+      }
+    }
 
     // Build result types
     auto elemType = memrefType.getElementType();
